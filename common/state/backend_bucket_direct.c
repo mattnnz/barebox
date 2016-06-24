@@ -29,6 +29,10 @@ struct state_backend_storage_bucket_direct {
 
 	int fd;
 
+	/* Cached data of the last read/write */
+	u8 *current_data;
+	ssize_t current_data_len;
+
 	struct device_d *dev;
 };
 
@@ -99,6 +103,29 @@ static int state_backend_bucket_direct_read(struct state_backend_storage_bucket
 	return 0;
 }
 
+
+static int state_backend_bucket_direct_fill_cache(
+		struct state_backend_storage_bucket *bucket)
+{
+	struct state_backend_storage_bucket_direct *direct =
+	    get_bucket_direct(bucket);
+	ssize_t read_len;
+	uint8_t *buf;
+	int ret;
+
+	ret = state_backend_bucket_direct_read(bucket, &buf, &read_len);
+	if (ret < 0) {
+		dev_err(direct->dev, "Failed to read from file, %d\n", ret);
+		free(buf);
+		return ret;
+	}
+
+	direct->current_data = buf;
+	direct->current_data_len = read_len;
+
+	return 0;
+}
+
 static int state_backend_bucket_direct_write(struct state_backend_storage_bucket
 					     *bucket, const uint8_t * buf,
 					     ssize_t len)
@@ -111,6 +138,11 @@ static int state_backend_bucket_direct_write(struct state_backend_storage_bucket
 	if (direct->max_size && len > direct->max_size)
 		return -E2BIG;
 
+	/* Nothing in cache? Then read to see what is on the device currently */
+	if (!direct->current_data) {
+		state_backend_bucket_direct_fill_cache(bucket);
+	}
+
 	ret = lseek(direct->fd, direct->offset, SEEK_SET);
 	if (ret < 0) {
 		dev_err(direct->dev, "Failed to seek file, %d\n", ret);
@@ -119,6 +151,26 @@ static int state_backend_bucket_direct_write(struct state_backend_storage_bucket
 
 	meta.magic = direct_magic;
 	meta.written_length = len;
+
+	/*
+	 * If we would write the same data that is currently on the device, we
+	 * can return successfully without writing.
+	 * Note that the cache may still be empty if the storage is empty or
+	 * errors occured.
+	 */
+	if (direct->current_data) {
+		dev_dbg(direct->dev, "Comparing cached data, writing %zd bytes, cached %zd bytes\n",
+			len, direct->current_data_len);
+		if (len == direct->current_data_len &&
+		    !memcmp(direct->current_data, buf, len)) {
+			dev_dbg(direct->dev, "Data already on device, not writing again\n");
+			return ret;
+		} else {
+			free(direct->current_data);
+			direct->current_data = NULL;
+		}
+	}
+
 	ret = write_full(direct->fd, &meta, sizeof(meta));
 	if (ret < 0) {
 		dev_err(direct->dev, "Failed to write metadata to file, %d\n", ret);
@@ -146,6 +198,9 @@ static void state_backend_bucket_direct_free(struct
 {
 	struct state_backend_storage_bucket_direct *direct =
 	    get_bucket_direct(bucket);
+
+	if (direct->current_data)
+		free(direct->current_data);
 
 	close(direct->fd);
 	free(direct);
