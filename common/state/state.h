@@ -70,6 +70,7 @@ struct state_backend_storage {
 	struct device_d *dev;
 
 	const char *name;
+	uint32_t stridesize;
 };
 
 /**
