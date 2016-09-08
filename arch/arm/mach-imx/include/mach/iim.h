@@ -81,6 +81,7 @@ static inline int imx25_iim_register_fec_ethaddr(void)
 	return 0;
 }
 
+
 #define IIM_BANK_MASK_WIDTH	3
 #define IIM_BANK_MASK_SHIFT	0
 #define IIM_BANK(n)		(((n) & ((1 << IIM_BANK_MASK_WIDTH) - 1)) << IIM_BANK_MASK_SHIFT)
@@ -100,5 +101,19 @@ static inline int imx25_iim_register_fec_ethaddr(void)
 int imx_iim_read_field(uint32_t field, unsigned *value);
 int imx_iim_write_field(uint32_t field, unsigned value);
 int imx_iim_permanent_write(int enable);
+
+static inline int vf610_iim_register_fec_ethaddr(void)
+{
+	int ret;
+	u8 buf[6];
+
+	ret = imx_iim_read(4, 2, buf, 6);
+	if (ret != 6)
+		return -EINVAL;
+
+	eth_register_ethaddr(0, buf);
+
+	return 0;
+}
 
 #endif /* __MACH_IMX_IIM_H */

@@ -59,8 +59,10 @@ static int imx_soc_from_dt(void)
 		return IMX_CPU_IMX6;
 	if (of_machine_is_compatible("fsl,imx6sx"))
 		return IMX_CPU_IMX6;
-
-	return 0;
+	if (of_machine_is_compatible("fsl,vf610"))
+		return IMX_CPU_VF610;
+	
+    return 0;
 }
 
 static int imx_init(void)
@@ -93,6 +95,8 @@ static int imx_init(void)
 		ret = imx53_init();
 	else if (cpu_is_mx6())
 		ret = imx6_init();
+	else if (cpu_is_vf610())
+		ret = vf610_init();
 	else
 		return -EINVAL;
 
@@ -117,6 +121,8 @@ static int imx_init(void)
 		ret = imx53_devices_init();
 	else if (cpu_is_mx6())
 		ret = imx6_devices_init();
+	else if (cpu_is_vf610())
+		ret = vf610_devices_init();
 	else
 		return -EINVAL;
 

@@ -14,6 +14,8 @@ void imx51_boot_save_loc(void __iomem *src_base);
 void imx53_boot_save_loc(void __iomem *src_base);
 void imx6_boot_save_loc(void __iomem *src_base);
 void imx6_get_boot_source(enum bootsource *src, int *instance);
+void vf610_boot_save_loc(void __iomem *src_base);
+void vf610_get_boot_source(enum bootsource *src, int *instance);
 
 int imx1_init(void);
 int imx21_init(void);
@@ -24,6 +26,7 @@ int imx35_init(void);
 int imx51_init(void);
 int imx53_init(void);
 int imx6_init(void);
+int vf610_init(void);
 
 int imx1_devices_init(void);
 int imx21_devices_init(void);
@@ -34,6 +37,7 @@ int imx35_devices_init(void);
 int imx51_devices_init(void);
 int imx53_devices_init(void);
 int imx6_devices_init(void);
+int vf610_devices_init(void);
 
 void imx5_cpu_lowlevel_init(void);
 void imx6_cpu_lowlevel_init(void);
@@ -51,6 +55,7 @@ void imx6_cpu_lowlevel_init(void);
 #define IMX_CPU_IMX51	51
 #define IMX_CPU_IMX53	53
 #define IMX_CPU_IMX6	6
+#define IMX_CPU_VF610   610
 
 extern unsigned int __imx_cpu_type;
 
@@ -160,6 +165,18 @@ extern unsigned int __imx_cpu_type;
 # define cpu_is_mx6()		(imx_cpu_type == IMX_CPU_IMX6)
 #else
 # define cpu_is_mx6()		(0)
+#endif
+
+#ifdef CONFIG_ARCH_VF610
+# ifdef imx_cpu_type
+#  undef imx_cpu_type
+#  define imx_cpu_type __imx_cpu_type
+# else
+#  define imx_cpu_type IMX_CPU_VF610
+# endif
+# define cpu_is_vf610()		(imx_cpu_type == IMX_CPU_VF610)
+#else
+# define cpu_is_vf610()		(0)
 #endif
 
 #define cpu_is_mx23()	(0)

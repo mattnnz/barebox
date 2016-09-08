@@ -53,6 +53,11 @@ struct device_d *imx_add_nand(void *base, struct imx_nand_platform_data *pdata)
 	return imx_add_device("imx_nand", -1, base, 0x1000, pdata);
 }
 
+struct device_d *imx_add_nand_vf610(void *base, struct imx_nand_platform_data *pdata)
+{
+	return imx_add_device("vf610_nfc", -1, base, 0x1000, pdata);
+}
+
 struct device_d *imx_add_fb(void *base, struct imx_fb_platform_data *pdata)
 {
 	return imx_add_device("imxfb", -1, base, 0x1000, pdata);

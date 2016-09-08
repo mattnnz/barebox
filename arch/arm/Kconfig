@@ -222,6 +222,15 @@ config ARCH_VEXPRESS
 	select CLKDEV_LOOKUP
 	select COMMON_CLK
 
+config ARCH_VF610
+    bool "Freescale Vybrid VF610" 
+    select CPU_V7
+    select ARM_AMBA
+	select GPIOLIB
+    select PINCTRL_IMX_IOMUX_V3
+	select COMMON_CLK
+	select CLKDEV_LOOKUP
+
 config ARCH_TEGRA
 	bool "NVIDIA Tegra"
 	select CPU_V7

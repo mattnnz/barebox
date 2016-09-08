@@ -288,3 +288,86 @@ void imx6_boot_save_loc(void __iomem *src_base)
 	bootsource_set(src);
 	bootsource_set_instance(instance);
 }
+
+#define VF610_SRC_SBMR1	0x04
+#define VF610_SRC_SBMR2	0x1c
+
+void vf610_get_boot_source(enum bootsource *src, int *instance)
+{
+	void __iomem *src_base = IOMEM(VF610_SRC_BASE_ADDR);
+	uint32_t sbmr1 = readl(src_base + VF610_SRC_SBMR1);
+	uint32_t sbmr2 = readl(src_base + VF610_SRC_SBMR2);
+	uint32_t boot_cfg_4_2_0;
+	int boot_mode;
+
+	/* BMOD[1:0] */
+	boot_mode = (sbmr2 >> 24) & 0x3;
+
+	switch (boot_mode) {
+	case 0: /* Fuses, fall through */
+	case 2: /* internal boot */
+		goto internal_boot;
+	case 1: /* Serial Downloader */
+		*src = BOOTSOURCE_SERIAL;
+		break;
+	case 3: /* reserved */
+		break;
+	};
+
+	return;
+
+internal_boot:
+
+	/* BOOT_CFG1[7:4] */
+	switch ((sbmr1 >> 4) & 0xf) {
+    case 0:
+		*src = BOOTSOURCE_QSPI;
+        break;
+    case 1:
+		*src = BOOTSOURCE_NOR;
+        break;
+    case 2:
+		/* BOOT_CFG4[2:0] */
+		boot_cfg_4_2_0 = (sbmr1 >> 24) & 0x7;
+
+		if (boot_cfg_4_2_0 > 4) {
+			*src = BOOTSOURCE_I2C;
+			*instance = boot_cfg_4_2_0 - 4;
+		} else {
+			*src = BOOTSOURCE_SPI;
+			*instance = boot_cfg_4_2_0;
+		}
+		break;
+    case 3:
+		*src = BOOTSOURCE_CAN;
+        break;
+	case 4:
+	case 5:
+	case 6:
+	case 7:
+		*src = BOOTSOURCE_MMC;
+
+		/* BOOT_CFG2[4:3] */
+		*instance = (sbmr1 >> 11) & 0x3;
+		break;
+	default:
+		break;
+	}
+
+	/* BOOT_CFG1[7:0] */
+	if (sbmr1 & (1 << 7))
+		*src = BOOTSOURCE_NAND;
+
+	return;
+}
+
+void vf610_boot_save_loc(void __iomem *src_base)
+{
+	enum bootsource src = BOOTSOURCE_UNKNOWN;
+	int instance = BOOTSOURCE_INSTANCE_UNKNOWN;
+
+	vf610_get_boot_source(&src, &instance);
+
+	bootsource_set(src);
+	bootsource_set_instance(instance);
+}
